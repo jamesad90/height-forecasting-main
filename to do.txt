@@ -1,0 +1,7 @@
+Adjust to be able to take a csv wide formnat with input data
+
+print IQR and median and all predicted values, as well as the input data
+
+See if the RMSE can be printed
+
+Fit PBI model
