@@ -2,7 +2,6 @@ from scipy import stats
 import pandas as pd
 import numpy as np
 from scipy.spatial.distance import cdist
-from scipy.interpolate import interp1d
 import matplotlib.pyplot as plt
 import tkinter as tk
 from tkinter import messagebox
@@ -10,6 +9,9 @@ import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from tkinter import filedialog
 import os
+from scipy.interpolate import interp1d
+
+
 root = tk.Tk()
 root.withdraw()  # Hide the main window
 
@@ -19,119 +21,151 @@ if not csv_file_path:
     raise Exception("A CSV file must be selected to proceed.")
 
 # Load your data
-data = pd.read_csv(csv_file_path)
+# Load your data
+growth_data = pd.read_csv(csv_file_path)
 
-# Assume that columns starting with 'ATV_' are age-related columns
-# and 'child_id' is an identifier column (if present)
-atv_columns = [col for col in data.columns if col.startswith('ATV_')]
-id_column = 'child_id' if 'child_id' in data.columns else None
+# Remove 'child_id' for outlier detection and processing
+#growth_data = data.drop(columns=['child_id'])
+atv_columns = [col for col in growth_data.columns if 'ATV_' in col]
 
-# Reshape the data to long format
-long_format_data = pd.melt(data, id_vars='child_id', value_vars=atv_columns, var_name='Age', value_name='Height')
+# Filter out outliers based on z-scores along columns
+z_scores = np.abs(stats.zscore(growth_data, nan_policy='omit'))
+growth_data = growth_data[(z_scores < 3).all(axis=1)]
 
-# Optionally, convert 'Age' from 'ATV_xx' format to numeric
-long_format_data['Age'] = long_format_data['Age'].apply(lambda x: float(x.split('_')[1]))
+growth_data = growth_data[atv_columns] / 10
+ages = [int(col.split('_')[1]) for col in atv_columns]
 
-# Drop NaN values if necessary
-long_format_data = long_format_data.dropna(subset=['Height'])
+age_columns = dict(zip(atv_columns, ages))
+growth_data.rename(columns=age_columns, inplace=True)
+print(growth_data)
+#z = 12.3 154.9, 13.9 170.8
+#input_data = [(12.3, 120.3), (13.4, 134.5), (15.6, 154.3)]
+age_intervals = np.arange(8.0, 18.1, 0.1)  # Ages from 8 to 18 in 0.1 year intervals
+min_age = min(growth_data.columns.astype(int))
+max_age = max(growth_data.columns.astype(int))
+def interpolate_row(row, age_range):
+    # Create an interpolator for the row
+    interpolator = interp1d(age_range, row, kind='linear', fill_value='extrapolate')
 
-# Check if there are any non-numeric values or NaNs
-#print(long_format_data['Age'].isnull().sum())  # Number of NaNs in the 'Age' column
+    # Generate new age intervals (0.1 year)
+    new_age_range = np.arange(min_age, max_age + 0.1, 0.1)
 
-# Drop rows where 'Age' or 'Height' is NaN, if needed
-long_format_data.dropna(subset=['Age', 'Height'], inplace=True)
+    # Interpolate heights for these new ages
+    interpolated_heights = interpolator(new_age_range)
 
-# Optionally, convert 'Age' to int if it only contains integer values
-#long_format_data['Age'] = long_format_data['Age'].astype(float)
+    return new_age_range, interpolated_heights
+
+# List to store interpolated data
+interpolated_data = []
+
+# Iterate over each row and interpolate
+for index, row in growth_data.iterrows():
+    ages, heights = interpolate_row(row, growth_data.columns.astype(float))
+    for age, height in zip(ages, heights):
+        interpolated_data.append((age, height))
+
+# Convert to DataFrame
+interpolated_growth_data = pd.DataFrame(interpolated_data, columns=['Age', 'Height'])
+print(interpolated_growth_data)
+#interpolated_growth_data = interpolated_growth_data.drop(columns=['child_id'])
+#z = 12.3 154.9, 13.9 170.8
 
 
-growth_data = long_format_data
-growth_data['Height']= growth_data['Height']/10
-growth_data['Height']=growth_data['Height'].round(1)
-growth_data['Age']= growth_data['Age'].round(1)
-#print(growth_data)
-long_format_data = growth_data
+#def find_closest_matches(input_age_height_pairs, interpolated_growth_data, top_n=100):
+    # Convert input_age_height_pairs to DataFrame
+   # input_df = pd.DataFrame(input_age_height_pairs, columns=['Age', 'Height'])
+    #print(input_df)
+    # Prepare a DataFrame to store the distances for each input pair
+    #distances_df = pd.DataFrame()
+    
+    # Iterate over each input pair
+    #for input_age, input_height in input_age_height_pairs:
+    #    interpolated_growth_data['Age'] = interpolated_growth_data['Age'].round(1)
+#        input_age_rounded = round(input_age, 1)
+#
+#        filtered_data = interpolated_growth_data[interpolated_growth_data['Age'] == input_age_rounded]
+ #       print('input age ', input_age_rounded)
+        # Filter the interpolated data for the specific age
+        #filtered_data = interpolated_growth_data[interpolated_growth_data['Age'] == input_age]
+  #      print('filtered data',filtered_data)
+    #    # If no data for this age, continue to the next pair
+     #   if filtered_data.empty:
+   #         continue
 
-interpolated_ages = np.arange(8.0, 19.0, 0.1)  # Ages from 8 to 18 in 0.1 year intervals
+        # Calculate distances for the input pair to the filtered data
+      #  distances = cdist(np.array([[input_age, input_height]]),
+        #                  filtered_data[['Age', 'Height']].values,
+       #                   'euclidean').flatten()
+        
+        # Store distances in the DataFrame
+        #distances_df = pd.concat([distances_df, pd.DataFrame(distances, columns=[input_age], index=filtered_data.index)], axis=1)
+        #print(distances_df)
+    # Sum the distances across the input ages
+   # total_distances = distances_df.sum(axis=1)
+    #print(distances_df)
+    ## Sort by total distance and get the top_n closest matches
+    #closest_indices = np.argsort(total_distances)[:top_n]
+    #print(closest_indices)
+    #return interpolated_growth_data.loc[closest_indices]
 
-# Create a new DataFrame to store interpolated values
-interpolated_data = pd.DataFrame()
+#z = 12.3 154.9, 13.9 170.8
 
-# Get the range of ages
-min_age = long_format_data['Age'].min()
-max_age = long_format_data['Age'].max()
-#interpolated_ages = np.arange(min_age, max_age, 0.1)
-print('next')
-# Interpolate for each child
-# Initialize an empty list to store the interpolated data for each child
-interpolated_list = []
-
-# Iterate over each child
-for child_id in long_format_data['child_id'].unique():
-    child_data = long_format_data[long_format_data['child_id'] == child_id]
-
-    # Create an interpolator using the child's data
-    # Assuming child_data has 'Age' and 'Height' columns
-    interpolator = interp1d(child_data['Age'], child_data['Height'],
-                            kind='linear', bounds_error=False, fill_value='extrapolate')
-
-    # Interpolate the heights for the specified age range
-    interpolated_heights = interpolator(interpolated_ages)
-
-    # Create a DataFrame for the current child and append it to the list
-    df_temp = pd.DataFrame({
-        'child_id': child_id,
-        'Age': interpolated_ages,
-        'Height': interpolated_heights
-    })
-    interpolated_list.append(df_temp)
-
-# Concatenate all the dataframes in the list into a single DataFrame
-interpolated_data = pd.concat(interpolated_list, ignore_index=True)
-interpolated_data['Age'] = interpolated_data['Age'].round(1)
-print('next')
-# Reset the index
-#interpolated_data.reset_index(drop=True, inplace=True)
-
-print(interpolated_data)
-wide_format_data = interpolated_data.pivot(index='child_id', columns='Age', values='Height')
-
-# Resetting the index to make 'child_id' a column again
-wide_format_data.reset_index(inplace=True)
-print(wide_format_data)
-growth_data = wide_format_data.drop(columns=['child_id'])
-
-def find_similar_growth_patterns(input_age_height_pairs, interpolated_growth_data, top_n=100):
+def find_closest_matches(input_age_height_pairs, interpolated_growth_data, top_n=100):
     # Generate the full range of ages at 0.1 year intervals
-   # Create a mask for ages that we have input data for
+    min_age = interpolated_growth_data['Age'].min()
+    max_age = interpolated_growth_data['Age'].max()
+    all_ages = np.arange(min_age, max_age, 0.1)
+
+    # Create a DataFrame for the input pattern
+    input_pattern_df = pd.DataFrame(index=all_ages, columns=['Height'])
+    for age, height in input_age_height_pairs:
+        if age in input_pattern_df.index:
+            input_pattern_df.at[age, 'Height'] = height
+
+    # Convert the input pattern to a numpy array, filling NaNs with a large number
+    input_pattern = input_pattern_df.fillna(1e10).to_numpy()
+    print(input_pattern)
+    # Calculate distances for each row in the interpolated data
+    distances = cdist(interpolated_growth_data[['Age', 'Height']].values, input_pattern, 'euclidean')
+
+    # Sum the distances across the input pattern
+    total_distances = distances.sum(axis=1)
+
+    # Get indices of the top_n closest growth curves
+    closest_indices = np.argsort(total_distances)[:top_n]
+
+    return interpolated_growth_data.iloc[closest_indices]
+
+
+#def find_similar_growth_patterns(input_age_height_pairs, interpolated_values, top_n=100):
+    # Create a mask for ages that we have input data for
     input_ages, _ = zip(*input_age_height_pairs)
-    age_mask = growth_data.columns.isin(input_ages)
+    age_mask = interpolated_values.columns.isin(input_ages)
     
     # Filter out rows with missing data in the relevant age columns
-    filtered_growth_data = growth_data.dropna(subset=growth_data.columns[age_mask])
+    filtered_growth_data = interpolated_values.dropna(subset=interpolated_values.columns[age_mask])
     
     # Create an input pattern array, filling in with NaN where we do not have input data
-    input_pattern = np.full((1, len(growth_data.columns)), np.nan)
-    print('input pattern', input_pattern)
+    input_pattern = np.full((1, len(interpolated_values.columns)), np.nan)
     for age, height in input_age_height_pairs:
-        input_pattern[0, growth_data.columns.get_loc(age)] = height
-    print('input pattern', input_pattern)
+        input_pattern[0, interpolated_values.columns.get_loc(age)] = height
+
     # Calculate distances using only the columns for which we have input data
     distances = cdist(input_pattern[:, age_mask], filtered_growth_data.to_numpy()[:, age_mask], 'euclidean')
-    print('distances:',distances)
+
     # Get indices of the top_n closest growth curves
     closest_indices = np.argsort(distances[0])[:top_n]
 
     return filtered_growth_data.iloc[closest_indices]
 
-
 def plot_growth(age_height_pairs):
     # Find the 100 most similar growth curves
-    similar_growth_curves = find_similar_growth_patterns(age_height_pairs, growth_data)
-
+    #interpolated_input = interpolated_input_data(age_height_pairs, age_intervals)
+    similar_growth_curves = find_closest_matches(age_height_pairs, interpolated_growth_data)
+    print(similar_growth_curves)
     # Calculate the median and the standard deviation (or interquartile range) of the heights at each age
     median_heights = similar_growth_curves.median()
-    print(median_heights)
+    print('median heights', median_heights)
     iqr = np.subtract(*np.percentile(similar_growth_curves, [75, 25], axis=0))
     predicted_height_at_18 = median_heights.loc[18.0]
 
@@ -142,10 +176,10 @@ def plot_growth(age_height_pairs):
     ax.set_ylabel('Height (cm)')
 
     # Plot the median projected growth curve
-    ax.plot(interpolated_ages, median_heights, label='Median Projected Growth', color='blue', marker='o')
+    ax.plot(ages, median_heights, label='Median Projected Growth', color='blue', marker='o')
 
     # Plot the average cloud around the median using the standard deviation
-    ax.fill_between(interpolated_ages, (median_heights - iqr), (median_heights + iqr), color='skyblue', alpha=0.5, label='IQR')
+    ax.fill_between(ages, (median_heights - iqr), (median_heights + iqr), color='skyblue', alpha=0.5, label='IQR')
 
     # Plot input data points
     input_ages, input_heights = zip(*age_height_pairs)
@@ -156,20 +190,15 @@ def plot_growth(age_height_pairs):
 
 
     # Annotate predicted values
-    whole_number_ages = np.arange(8.0, 19.0, 1.0)
-    for age in whole_number_ages:
-        if age in median_heights.index:
-            height = median_heights.loc[age]
-            print(age)
-            print(height)
-            ax.annotate(f'{height:.2f}', (age, height), textcoords="offset points", xytext=(0, 10), ha='center', fontsize=12)
+    for age, height in zip(ages, median_heights):
+        ax.annotate(f'{height:.2f}', (age, height), textcoords="offset points", xytext=(0, 10), ha='center', fontsize=8)
 
     
     
     data_table = similar_growth_curves.to_string()
     return fig, data_table
 
-#11.8 129.8, 12.7 145.4, 15.4 162.1
+
 class GrowthApp(tk.Tk):
     def __init__(self):
         super().__init__()
@@ -179,12 +208,17 @@ class GrowthApp(tk.Tk):
         self.age_height_pairs = []
 
         # Age input
-        self.age_label = tk.Label(self, text="Age Height (separate multiple measurements by commas):")
+        self.age_label = tk.Label(self, text="Age:")
         self.age_label.pack()
         self.age_entry = tk.Entry(self)
         self.age_entry.pack()
 
-       
+        # Height input
+        self.height_label = tk.Label(self, text="Height (cm):")
+        self.height_label.pack()
+        self.height_entry = tk.Entry(self)
+        self.height_entry.pack()
+
         # Button to add data to the list
         self.add_button = tk.Button(self, text="Add Data", command=self.add_data)
         self.add_button.pack()
@@ -255,10 +289,10 @@ class GrowthApp(tk.Tk):
             return
         # Assuming the existence of a function that plots and returns the figure
         # such as `plot_growth` based on the previous code
-        fig, data_table = plot_growth(self.age_height_pairs)
-        self.display_plot(fig, data_table)
+        fig = plot_growth(self.age_height_pairs)
+        self.display_plot(fig)
 
-    def display_plot(self, fig, data_table):
+    def display_plot(self, fig):
         # If a previous figure exists, clear it before plotting a new one
         if self.canvas:
             self.canvas.get_tk_widget().destroy()
