@@ -10,5 +10,3 @@ average_values_df = results_df.groupby('Ages Used')['Actual Height at 18','Predi
 # Save the average_values_df DataFrame to a CSV file
 average_values_csv_path = 'average_values.csv'
 average_values_df.to_csv(average_values_csv_path, index=False)
-
-z=z
