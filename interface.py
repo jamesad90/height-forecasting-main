@@ -25,7 +25,7 @@ if not csv_file_path:
 data = pd.read_csv(csv_file_path)
 print(data)
 interpolated_growth_data = process_reference_data(data)
-
+interpolated_growth_data = interpolated_growth_data.drop(columns=['child_id'])
 
 class GrowthApp(tk.Tk):
     def __init__(self):
@@ -89,7 +89,6 @@ class GrowthApp(tk.Tk):
             self.age_height_pairs.sort()  # Keep the list sorted by age
             self.update_data_listbox()
             self.age_entry.delete(0, tk.END)
-            self.height_entry.delete(0, tk.END)
         except ValueError:
             messagebox.showerror("Error", "Invalid input for age or height.")
 
@@ -110,12 +109,11 @@ class GrowthApp(tk.Tk):
         if not self.age_height_pairs:
             messagebox.showerror("Error", "No data to plot.")
             return
-        # Assuming the existence of a function that plots and returns the figure
-        # such as `plot_growth` based on the previous code
-        fig, data_table = plot_growth(self.age_height_pairs, interpolated_growth_data)
-        self.display_plot(fig, data_table)
+        
+        fig = plot_growth(self.age_height_pairs, interpolated_growth_data)
+        self.display_plot(fig)
 
-    def display_plot(self, fig, data_table):
+    def display_plot(self, fig):
         # If a previous figure exists, clear it before plotting a new one
         if self.canvas:
             self.canvas.get_tk_widget().destroy()
@@ -125,13 +123,13 @@ class GrowthApp(tk.Tk):
         self.canvas.draw()
         self.canvas.get_tk_widget().pack()
 
-        # Display data table
-        table_frame = tk.Frame(self)
-        table_frame.pack(side=tk.TOP, pady=10)
-        data_table_widget = tk.Text(table_frame, wrap=tk.WORD, height=5, width=30)
-        data_table_widget.insert(tk.END, data_table)
-        data_table_widget.config(state=tk.DISABLED)
-        data_table_widget.pack()
+        # # Display data table
+        # table_frame = tk.Frame(self)
+        # table_frame.pack(side=tk.TOP, pady=10)
+        # data_table_widget = tk.Text(table_frame, wrap=tk.WORD, height=5, width=30)
+        # data_table_widget.insert(tk.END, data_table)
+        # data_table_widget.config(state=tk.DISABLED)
+        # data_table_widget.pack()
 
 
 if __name__ == "__main__":

@@ -35,7 +35,8 @@ def find_similar_growth_patterns(input_age_height_pairs, interpolated_growth_dat
 
     return filtered_growth_data.iloc[closest_indices]
 
-interpolated_ages = np.arange(8.0, 19.0, 0.1) 
+interpolated_ages = np.arange(8.0, 18.10, 0.1)[:-1] 
+#print(interpolated_ages)
 def plot_growth(age_height_pairs, interpolated_growth_data):
     # Find the 100 most similar growth curves
    
@@ -43,16 +44,16 @@ def plot_growth(age_height_pairs, interpolated_growth_data):
 
     # Calculate the median and the standard deviation (or interquartile range) of the heights at each age
     median_heights = similar_growth_curves.median()
-    #print(median_heights)
+   # print(median_heights)
     iqr = np.subtract(*np.percentile(similar_growth_curves, [75, 25], axis=0))
     predicted_height_at_18 = median_heights.loc[18.0].round(1)
-    print(predicted_height_at_18)
+   # print(predicted_height_at_18)
     # Plot the results
     fig, ax = plt.subplots(figsize=(10, 5))
     ax.set_title('Predicted Growth Curve Based on Similar Patterns')
     ax.set_xlabel('Age')
     ax.set_ylabel('Height (cm)')
-
+    
     # Plot the median projected growth curve
     ax.plot(interpolated_ages, median_heights, label='Median Projected Growth', color='blue', marker='o')
 
@@ -61,14 +62,15 @@ def plot_growth(age_height_pairs, interpolated_growth_data):
 
     # Plot input data points
     input_ages, input_heights = zip(*age_height_pairs)
+    #print('next 2:',input_ages, input_heights)
     for age, height in age_height_pairs:
         ax.scatter(input_ages, input_heights, color='red', label='Input Data Points', zorder=5)
         ax.scatter(18.0, predicted_height_at_18, color='green', label=f'Predicted Height at 18', zorder=5, s=100)
-        ax.annotate(f'{height:.2f}', (age, height), textcoords="offset points", xytext=(0, 10), ha='center', fontsize=8)
+        ax.annotate(f'{height:.2f}', (age, height), textcoords="offset points", xytext=(0, -20), ha='center', fontsize=10)
 
 
     # Annotate predicted values
-    whole_number_ages = np.arange(8.0, 19.0, 1.0)
+    whole_number_ages = np.arange(8.0, 18.0, 1.0)
     for age in whole_number_ages:
         if age in median_heights.index:
             height = median_heights.loc[age]
@@ -78,8 +80,8 @@ def plot_growth(age_height_pairs, interpolated_growth_data):
 
     
     
-    data_table = similar_growth_curves.to_string()
-    return fig, data_table
+    #data_table = similar_growth_curves.to_string()
+    return fig #data_table
 
 
 def process_reference_data(csv_file_path):
@@ -98,7 +100,7 @@ def process_reference_data(csv_file_path):
     growth_data['Age'] = growth_data['Age'].round(1)
     long_format_data = growth_data
 
-    interpolated_ages = np.arange(8.0, 19.0, 0.1)
+    interpolated_ages = np.arange(8.0, 18.10, 0.1)[:-1] 
 
     interpolated_list = []
     for child_id in long_format_data['child_id'].unique():
@@ -118,9 +120,9 @@ def process_reference_data(csv_file_path):
     #print(growth_data)
     return growth_data
 
-def predict_heights(age_height_pairs, growth_data):
+def predict_heights(age_height_pairs, interpolated_growth_data):
     # Find the 100 most similar growth curves
-    similar_growth_curves = find_similar_growth_patterns(age_height_pairs, growth_data)
+    similar_growth_curves = find_similar_growth_patterns(age_height_pairs, interpolated_growth_data)
     median_heights = similar_growth_curves.median()
     if not isinstance(median_heights, pd.DataFrame):
         median_heights = median_heights.to_frame()
