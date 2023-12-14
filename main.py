@@ -56,8 +56,8 @@ def generate_predicted_heights(age_height_pairs, similar_growth_curves):
     #average_yearly_growth = average_yearly_growth.copy()
     average_yearly_growth.index = new_avg_index
     yearly_growth.index = new_index
-    print(yearly_growth)
-    print(average_yearly_growth)
+    #print(yearly_growth)
+    #print(average_yearly_growth)
     # Initialize a Series to store predicted heights
     age_range = np.arange(8.0, 18.1, 1.0)
     predicted_heights = pd.Series(index=age_range, name='Height')
@@ -83,7 +83,7 @@ def generate_predicted_heights(age_height_pairs, similar_growth_curves):
 
 
 
-
+#old version of function
 # def generate_predicted_heights(age_height_pairs, similar_growth_curves):
     """
     Generates predicted heights based on input data and average yearly growth.
@@ -183,11 +183,11 @@ def plot_growth(age_height_pairs, interpolated_growth_data):
     # Calculate the median and the standard deviation (or interquartile range) of the heights at each age
     median_heights = similar_growth_curves.median()
     #average_yearly_growth = similar_growth_curves
-    print(median_heights)
+    #print(median_heights)
     iqr = np.subtract(*np.percentile(similar_growth_curves, [75, 25], axis=0))
     avg_iqr = np.subtract(*np.percentile(yearly_growth, [75, 25], axis=0))
-    print(avg_iqr)
-    print(iqr)
+    #print(avg_iqr)
+    #print(iqr)
     predicted_height_at_18 = median_heights.loc[18.0].round(1)
    # print(predicted_height_at_18)
     # Plot the results
@@ -241,7 +241,7 @@ def plot_growth(age_height_pairs, interpolated_growth_data):
                         ha='center', 
                         fontsize=12, 
                         color = 'red')
-    print(average_yearly_growth)
+    #print(average_yearly_growth)
     ax.plot(whole_number_ages, average_yearly_growth, label='Average Yearly Growth', color='red', marker='o')
     ax.fill_between(whole_number_ages, (average_yearly_growth - avg_iqr), (average_yearly_growth + avg_iqr), color='red', alpha=0.5, label='Avg Growth IQR')
     handles, labels = plt.gca().get_legend_handles_labels()
@@ -255,7 +255,7 @@ def plot_growth(age_height_pairs, interpolated_growth_data):
 
 
 def process_reference_data(csv_file_path):
-    data = pd.read_csv(csv_file_path)
+    data = csv_file_path
     atv_columns = [col for col in data.columns if col.startswith('ATV_')]
     id_column = 'child_id' if 'child_id' in data.columns else None
 
@@ -286,14 +286,14 @@ def process_reference_data(csv_file_path):
     wide_format_data = interpolated_data.pivot(index='child_id', columns='Age', values='Height')
     wide_format_data.reset_index(inplace=True)
     growth_data = wide_format_data
-    growth_data = wide_format_data.drop(columns=['child_id'])
+    #growth_data = wide_format_data.drop(columns=['child_id'])
     #print(growth_data)
     return growth_data
 
 def predict_heights(age_height_pairs, interpolated_growth_data):
     # Find the 100 most similar growth curves
     similar_growth_curves = find_similar_growth_patterns(age_height_pairs, interpolated_growth_data)
-    print(similar_growth_curves)
+    #print(similar_growth_curves)
     
     average_yearly_growth  = generate_predicted_heights(age_height_pairs, similar_growth_curves)
     median_heights = similar_growth_curves.median()

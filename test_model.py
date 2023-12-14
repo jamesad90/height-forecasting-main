@@ -45,7 +45,6 @@ plot_growth(input_data,reference_data)
 #similar_growth_curves = find_similar_growth_patterns(input_data, reference_data)
 #median_heights = similar_growth_curves.median()
 #print(median_heights)
-z=z
 
 def process_combinations(child_id, combo, row, wide_format_test_data):
     # Convert combo to age_height_pairs
