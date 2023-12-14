@@ -9,17 +9,19 @@ import joblib
 from scipy.optimize import curve_fit
 from scipy.interpolate import UnivariateSpline
 os.chdir('src')
+scaler = StandardScaler()
 
 loaded_model = load_model('my_model.keras')
-def test_model_with_pairs(model, age_height_pairs):
+def test_model_with_pairs(model, age_height_pairs, scaler):
     # Extract ages and heights
     ages = np.array([pair[0] for pair in age_height_pairs]).reshape(-1, 1)
     heights = np.array([pair[1] for pair in age_height_pairs])
     
-
+    # Scale the ages using the provided scaler
+    scaled_ages = scaler.transform(ages)
     
     # Predict heights using the model
-    predicted_heights = model.predict(ages).flatten()
+    predicted_heights = model.predict(scaled_ages).flatten()
     
     # Print the results
     for i, (age, actual_height) in enumerate(age_height_pairs):
@@ -30,7 +32,7 @@ def test_model_with_pairs(model, age_height_pairs):
 age_height_pairs_to_test = [(8, 130), (10, 140), (12, 150), (14, 160), (16, 170)]
 
 # Testing the model with the provided list of age-height pairs
-test_model_with_pairs(loaded_model, age_height_pairs_to_test)
+test_model_with_pairs(loaded_model, age_height_pairs_to_test, scaler)
 
 
 

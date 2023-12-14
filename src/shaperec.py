@@ -59,6 +59,7 @@ for child_id, group_data in grouped:
     phv_age = age_data[np.argmax(velocities)]
     phv_value = np.max(velocities)
     final_height = np.max(height_data)
+
     # Calculate acceleration at PHV age
     acceleration = second_derivative(phv_age)
 
@@ -70,8 +71,10 @@ for child_id, group_data in grouped:
         'Curve_Param_a': params[0],  # Assuming 'params' is an array of curve parameters
         'Curve_Param_b': params[1],
         'Curve_Param_c': params[2],
-        'Final_Height' : final_height
+        'Final_Height': final_height,
+        'Max_Height_Predicted': growth_curve(18, *params)  # Predict max height at age 18
     }
+
 
 # Now 'features_dict' contains the extracted features for each child
 # Convert the features_dict into a DataFrame

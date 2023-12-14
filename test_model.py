@@ -1,7 +1,7 @@
 from scipy import stats
 import pandas as pd
 import numpy as np
-from main import find_similar_growth_patterns, process_reference_data, predict_heights
+from main import find_similar_growth_patterns, process_reference_data, predict_heights, plot_growth
 from sklearn.metrics import mean_absolute_error, mean_squared_error
 import pandas as pd
 import numpy as np
@@ -10,19 +10,19 @@ from tqdm import tqdm
 from itertools import combinations
 csv_file_path = 'svk_height_weight_mens_2008_v2.csv'
 reference_data = process_reference_data(csv_file_path)
-print('next')
+
 # Load the dataset and display the first few rows to understand its structure
 test_data = pd.read_csv('Berkeley_EB_4.csv')
-print(test_data.head())
+#print(test_data.head())
 
 
 wide_format_test_data = test_data.pivot(index='child_id', columns='age_decimalyears', values='height_cm')
 
 # Display the first few rows of the wide format data
-print(wide_format_test_data.head())
+#print(wide_format_test_data.head())
 #wide_format_test_data = wide_format_test_data.reset_index()
 
-print('next')
+
 def calculate_accuracy(true_values, predicted_values):
     mae = mean_absolute_error(true_values, predicted_values)
     return mae
@@ -35,6 +35,17 @@ def calculate_rmse(true_values, predicted_values):
 rmse_results = {}
 mae_results = {}
 comparison_data = []
+
+input_data = [(9, 139.4), (10, 144.9), (11, 149.9)]
+
+
+plot_growth(input_data,reference_data)
+
+#predict_heights(input_data, reference_data)
+#similar_growth_curves = find_similar_growth_patterns(input_data, reference_data)
+#median_heights = similar_growth_curves.median()
+#print(median_heights)
+z=z
 
 def process_combinations(child_id, combo, row, wide_format_test_data):
     # Convert combo to age_height_pairs

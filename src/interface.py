@@ -6,7 +6,7 @@ from sklearn.linear_model import LinearRegression
 import tkinter as tk
 from tkinter import ttk
 from tensorflow.keras.models import load_model
-loaded_model = load_model('my_model.h5')
+
 # Provided data
 ages = np.array(range(8, 19))
 errors = np.array([6.5, 8.553141025641935, 11.442243589744066, 14.02350815850832, 19.68958333333262, 30.678394522144117, 32.89243589743751, 27.27000000000089, 26.441666666666606, 27.68050990676022, 29.495993589744216])
