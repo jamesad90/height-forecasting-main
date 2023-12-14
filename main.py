@@ -64,6 +64,7 @@ def generate_predicted_heights(age_height_pairs, similar_growth_curves):
 
     # Fill in the input data
     for age, height in age_height_pairs:
+        age = round(age)
         predicted_heights.at[age] = height
 
     # Predict future and past heights
@@ -79,99 +80,6 @@ def generate_predicted_heights(age_height_pairs, similar_growth_curves):
                 predicted_heights.at[age] = predicted_heights.at[age - 1.0] + growth_rate
     #print(predicted_heights)
     return predicted_heights, yearly_growth
-
-
-
-
-#old version of function
-# def generate_predicted_heights(age_height_pairs, similar_growth_curves):
-    """
-    Generates predicted heights based on input data and average yearly growth.
-    
-    :param input_data: Dictionary with age as key and height as value.
-    :param avg_yearly_growth: Series with average yearly growth by age.
-    :return: Dictionary with predicted heights from age 8.0 to 18.0.
-    """
-    predicted_heights = {}
-
-   # Number of 0.1 year increments in a year
-    increments_per_year = 10
-
-    # Calculate the number of complete years in the dataset
-    num_complete_years = (similar_growth_curves.shape[1] - 1) // increments_per_year
-    
-    # Initialize an empty DataFrame for yearly growth
-    yearly_growth = pd.DataFrame(index=similar_growth_curves.index)
-    
-    # Calculate yearly growth
-    
-    for i in range(num_complete_years):
-        #print(i)
-        start_col = i * increments_per_year
-        end_col = start_col + increments_per_year
-        yearly_growth[i+8.0] = similar_growth_curves.iloc[:, end_col] - similar_growth_curves.iloc[:, start_col]
-    #print(yearly_growth)
-    average_yearly_growth = yearly_growth.median(axis=0)
-    print(average_yearly_growth)
-   
-# Calculate the average yearly growth for each individual
-
-
-    # Initialize an empty DataFrame for predicted heights
-    predicted_heights = pd.DataFrame(index=[0])
-    
-    # Convert input list to a dictionary for easier access
-    age_height_dict = {float(age): height for age, height in age_height_pairs}
-
-    # Define a function to get the growth rate from the numpy array
-    def get_growth_rate(age):
-        # Convert the age to the correct format if necessary
-        age_index = float(age)
-                
-        # Check if the age is in the index and return the corresponding growth rate
-        if age_index in average_yearly_growth.index:
-            return average_yearly_growth[age_index]
-        else:
-            return 0
-    # Predict future heights
-    max_input_age = max(age_height_dict.keys())
-    #print(max_input_age)
-    while max_input_age < 18.0:
-        next_age = max_input_age + 1.0
-        #print(next_age)
-        growth_rate = get_growth_rate(next_age - 1.0)
-        #print(growth_rate)
-        predicted_height = age_height_dict[max_input_age] + growth_rate
-        age_height_dict[next_age] = predicted_height
-        predicted_heights.at[0, next_age] = predicted_height
-        max_input_age = next_age
-        #print('next age end', next_age)
-    # Predict past heights
-    min_input_age = min(age_height_dict.keys())
-    while min_input_age > 8.0:
-        prev_age = min_input_age - 1.0
-        #print(prev_age)
-        growth_rate = get_growth_rate(prev_age + 1.0)
-        #print(growth_rate)
-        predicted_height = age_height_dict[min_input_age] - growth_rate
-        age_height_dict[prev_age] = predicted_height
-        predicted_heights.at[0, prev_age] = predicted_height
-        min_input_age = prev_age
-
-    # Fill in the original input data
-    for age, height in age_height_dict.items():
-        
-        predicted_heights.at[0, age] = height
-
-    # Sort the DataFrame by age columns
-    predicted_heights = predicted_heights.reindex(sorted(predicted_heights.columns), axis=1)
-    predicted_heights = predicted_heights.melt(var_name='Age', value_name='Height')
-    predicted_heights['Age'] = predicted_heights['Age'].astype(float)
-    predicted_heights.set_index('Age', inplace = True)
-    predicted_heights = pd.to_numeric(predicted_heights['Height'], errors = 'coerce')
-    #print(predicted_heights)
-    return predicted_heights, yearly_growth
-
 
 
 def plot_growth(age_height_pairs, interpolated_growth_data):
@@ -195,6 +103,8 @@ def plot_growth(age_height_pairs, interpolated_growth_data):
     ax.set_title('Predicted Growth Curve Based on Similar Patterns')
     ax.set_xlabel('Age')
     ax.set_ylabel('Height (cm)')
+    plt.xticks(np.arange(8, 98, 1))
+    plt.yticks(np.arange(100, 250, 5))
     #print(median_heights)
     # Plot the median projected growth curve
     ax.plot(interpolated_ages, median_heights, label='Median Projected Growth', color='blue', marker='o')
@@ -248,12 +158,46 @@ def plot_growth(age_height_pairs, interpolated_growth_data):
     handles.append(annotation_proxy) 
     #by_label = dict(zip(labels, handles))
     ax.legend(handles=handles, labels=labels)
-    plt.show()
+    
     
     #data_table = similar_growth_curves.to_string()
     return fig #data_table
 
+def process_reference_data_test(csv_file_path):
+    data = pd.read_csv(csv_file_path)
+    atv_columns = [col for col in data.columns if col.startswith('ATV_')]
+    id_column = 'child_id' if 'child_id' in data.columns else None
 
+    long_format_data = pd.melt(data, id_vars=id_column, value_vars=atv_columns, var_name='Age', value_name='Height')
+    long_format_data['Age'] = long_format_data['Age'].apply(lambda x: float(x.split('_')[1]))
+    long_format_data = long_format_data.dropna(subset=['Height'])
+    long_format_data.dropna(subset=['Age', 'Height'], inplace=True)
+
+    growth_data = long_format_data
+    growth_data['Height'] = growth_data['Height'] / 10
+    growth_data['Height'] = growth_data['Height'].round(1)
+    growth_data['Age'] = growth_data['Age'].round(1)
+    long_format_data = growth_data
+
+    interpolated_ages = np.arange(8.0, 18.10, 0.1)[:-1] 
+
+    interpolated_list = []
+    for child_id in long_format_data['child_id'].unique():
+        child_data = long_format_data[long_format_data['child_id'] == child_id]
+        interpolator = interp1d(child_data['Age'], child_data['Height'], kind='linear', bounds_error=False, fill_value='extrapolate')
+        interpolated_heights = interpolator(interpolated_ages)
+        df_temp = pd.DataFrame({'child_id': child_id, 'Age': interpolated_ages, 'Height': interpolated_heights})
+        interpolated_list.append(df_temp)
+
+    interpolated_data = pd.concat(interpolated_list, ignore_index=True)
+    interpolated_data['Age'] = interpolated_data['Age'].round(1)
+
+    wide_format_data = interpolated_data.pivot(index='child_id', columns='Age', values='Height')
+    wide_format_data.reset_index(inplace=True)
+    growth_data = wide_format_data
+    growth_data = wide_format_data.drop(columns=['child_id'])
+    #print(growth_data)
+    return growth_data
 def process_reference_data(csv_file_path):
     data = csv_file_path
     atv_columns = [col for col in data.columns if col.startswith('ATV_')]

@@ -1,7 +1,7 @@
 from scipy import stats
 import pandas as pd
 import numpy as np
-from main import find_similar_growth_patterns, process_reference_data, predict_heights, plot_growth
+from main import find_similar_growth_patterns, predict_heights, plot_growth, process_reference_data_test
 from sklearn.metrics import mean_absolute_error, mean_squared_error
 import pandas as pd
 import numpy as np
@@ -9,7 +9,7 @@ from scipy.spatial.distance import cdist
 from tqdm import tqdm
 from itertools import combinations
 csv_file_path = 'svk_height_weight_mens_2008_v2.csv'
-reference_data = process_reference_data(csv_file_path)
+reference_data = process_reference_data_test(csv_file_path)
 
 # Load the dataset and display the first few rows to understand its structure
 test_data = pd.read_csv('Berkeley_EB_4.csv')
@@ -36,11 +36,11 @@ rmse_results = {}
 mae_results = {}
 comparison_data = []
 
+#input_data = [(9.1, 139.4), (10.3, 144.9), (11.2, 149.9)]
 input_data = [(9, 139.4), (10, 144.9), (11, 149.9)]
 
 
 plot_growth(input_data,reference_data)
-
 #predict_heights(input_data, reference_data)
 #similar_growth_curves = find_similar_growth_patterns(input_data, reference_data)
 #median_heights = similar_growth_curves.median()
