@@ -8,6 +8,7 @@ import numpy as np
 from scipy.spatial.distance import cdist
 from tqdm import tqdm
 from itertools import combinations
+import matplotlib as plt
 csv_file_path = 'svk_height_weight_mens_2008_v2.csv'
 reference_data = process_reference_data_test(csv_file_path)
 
@@ -22,7 +23,7 @@ wide_format_test_data = test_data.pivot(index='child_id', columns='age_decimalye
 #print(wide_format_test_data.head())
 #wide_format_test_data = wide_format_test_data.reset_index()
 
-
+top_n =100 
 def calculate_accuracy(true_values, predicted_values):
     mae = mean_absolute_error(true_values, predicted_values)
     return mae
@@ -37,13 +38,18 @@ mae_results = {}
 comparison_data = []
 
 #input_data = [(9.1, 139.4), (10.3, 144.9), (11.2, 149.9)]
-input_data = [(9, 139.4), (10, 144.9), (11, 149.9)]
+input_data = [(10, 139.4), (12, 154.9), (14, 169.9)]
 
 
-plot_growth(input_data,reference_data)
-#predict_heights(input_data, reference_data)
-#similar_growth_curves = find_similar_growth_patterns(input_data, reference_data)
-#median_heights = similar_growth_curves.median()
+#fig, iqr, predicted_height_at_18, predicted_heights = plot_growth(input_data,reference_data, top_n)
+#print(predicted_heights)
+#range = predicted_heights + iqr
+#Range = predicted_heights - iqr
+#print (range, Range)
+#print(iqr, predicted_height_at_18)
+predict_heights(input_data, reference_data)
+similar_growth_curves = find_similar_growth_patterns(input_data, reference_data)
+median_heights = similar_growth_curves.median()
 #print(median_heights)
 
 def process_combinations(child_id, combo, row, wide_format_test_data):
@@ -67,7 +73,7 @@ def process_combinations(child_id, combo, row, wide_format_test_data):
         }
 
 # Set the age range from which to create combinations
-age_range = np.arange(9, 18, 1.0)
+age_range = np.arange(13, 16, 1.0)
 
 # Create a DataFrame to hold the results
 results = []
@@ -85,4 +91,4 @@ for child_id, row in tqdm(wide_format_test_data.iterrows()):
 results_df = pd.DataFrame(results)
 
 # Save the DataFrame to a CSV file
-results_df.to_csv('combination_results.csv', index=False)
+results_df.to_csv('13-16_results.csv', index=False)

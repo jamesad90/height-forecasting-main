@@ -11,7 +11,74 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from tkinter import filedialog
 import os
 import matplotlib.lines as mlines
-def find_similar_growth_patterns(input_age_height_pairs, interpolated_growth_data, top_n=100):
+
+test_data = pd.read_csv('Berkeley_EB_4.csv')
+def categorize_maturation(test_data):
+    # Ensure the data is a DataFrame
+    if not isinstance(test_data, pd.DataFrame):
+        raise ValueError("Input data must be a pandas DataFrame")
+
+    # Calculate yearly height growth
+    test_data['height_growth'] = test_data.groupby('child_id')['height_cm'].diff()
+
+    # Determine age at PHV for each child
+    phv_age = test_data.loc[test_data.groupby('child_id')['height_growth'].idxmax()]
+
+    # Define criteria for early and late maturing (adjust as needed)
+    early_maturing_age = 12
+    late_maturing_age = 14
+
+    # Categorize each child
+    phv_age['maturation'] = pd.cut(phv_age['age_decimalyears'], 
+                                   bins=[0, early_maturing_age, late_maturing_age, float('inf')],
+                                   labels=['Early', 'Normal', 'Late'])
+
+    # Merge the maturation category back into the original data
+    result = test_data.merge(phv_age[['child_id', 'maturation']], on='child_id', how='left')
+
+    return result
+
+categorized_data = categorize_maturation(test_data)
+print(categorized_data)
+z=z
+
+#find optimal number of cases to use from the reference data
+def find_optimal_top_n(input_age_height_pairs, actual_height_at_18, interpolated_growth_data, top_n_range):
+    optimal_top_n = None
+    smallest_difference = float('inf')
+    optimal_predicted_height = None
+
+    for top_n in top_n_range:
+        similar_growth_curves = find_similar_growth_patterns(input_age_height_pairs, interpolated_growth_data, top_n)
+        predicted_heights, _ = generate_predicted_heights(input_age_height_pairs, similar_growth_curves)
+        predicted_height_at_18 = predicted_heights.loc[18.0]
+
+        difference = abs(predicted_height_at_18 - actual_height_at_18)
+
+        if difference < smallest_difference:
+            smallest_difference = difference
+            optimal_top_n = top_n
+            optimal_predicted_height = predicted_height_at_18
+
+    return optimal_top_n, optimal_predicted_height
+
+def find_best_predicted_height(input_age_height_pairs, interpolated_growth_data, predicted_heights_range):
+    optimal_height = None
+    lowest_top_n = float('inf')
+    results = {}
+
+    for predicted_height in predicted_heights_range:
+        print(predicted_height)
+        top_n, _ = find_optimal_top_n(input_age_height_pairs, predicted_height, interpolated_growth_data, range(10, 200))
+        results[predicted_height] = top_n
+        if top_n < lowest_top_n:
+            lowest_top_n = top_n
+            optimal_height = predicted_height
+
+    return optimal_height, results
+
+
+def find_similar_growth_patterns(input_age_height_pairs, interpolated_growth_data, top_n):
     # Generate the full range of ages at 0.1 year intervals
    # Create a mask for ages that we have input data for
     
@@ -51,12 +118,15 @@ def generate_predicted_heights(age_height_pairs, similar_growth_curves):
     yearly_growth = similar_growth_curves.diff(axis=1).iloc[:, 0::10] *10
     
     average_yearly_growth = yearly_growth.median(axis=0)
+    
+    #print(average_yearly_growth)
     new_avg_index = average_yearly_growth.index - 1
     new_index = yearly_growth.index -1
     #average_yearly_growth = average_yearly_growth.copy()
     average_yearly_growth.index = new_avg_index
     yearly_growth.index = new_index
     #print(yearly_growth)
+
     #print(average_yearly_growth)
     # Initialize a Series to store predicted heights
     age_range = np.arange(8.0, 18.1, 1.0)
@@ -68,25 +138,31 @@ def generate_predicted_heights(age_height_pairs, similar_growth_curves):
         predicted_heights.at[age] = height
 
     # Predict future and past heights
-    for age in predicted_heights.index:
+    for age in predicted_heights.iloc[::-1].index:
+        #print(age)
         if pd.isna(predicted_heights.at[age]):  # Only predict if height is not already provided
             # Use growth rate from previous year (offset by -1)
             if age < min(age_height_pairs)[0]:  # Predict past heights
                 growth_rate = average_yearly_growth.get(age, 0)
-                print(growth_rate)
+                #print(age, growth_rate)
                 predicted_heights.at[age] = predicted_heights.at[age + 1.0] - growth_rate
-            elif age > max(age_height_pairs)[0]:  # Predict future heights
+    for age in predicted_heights.index:
+        #print(age)
+        if pd.isna(predicted_heights.at[age]):  # Only predict if height is not already provided
+            # Use growth rate from previous year (offset by -1)   
+            if age > min(age_height_pairs)[0]:  # Predict future heights
                 growth_rate = average_yearly_growth.get(age - 1.0, 0)
+                #print(growth_rate)
                 predicted_heights.at[age] = predicted_heights.at[age - 1.0] + growth_rate
     #print(predicted_heights)
     return predicted_heights, yearly_growth
 
 
-def plot_growth(age_height_pairs, interpolated_growth_data):
+def plot_growth(age_height_pairs, interpolated_growth_data, top_n):
     # Find the 100 most similar growth curves
    
-    similar_growth_curves = find_similar_growth_patterns(age_height_pairs, interpolated_growth_data)
-    average_yearly_growth, yearly_growth  = generate_predicted_heights(age_height_pairs, similar_growth_curves)
+    similar_growth_curves = find_similar_growth_patterns(age_height_pairs, interpolated_growth_data, top_n)
+    predicted_heights, yearly_growth  = generate_predicted_heights(age_height_pairs, similar_growth_curves)
    
     # Calculate the median and the standard deviation (or interquartile range) of the heights at each age
     median_heights = similar_growth_curves.median()
@@ -94,10 +170,11 @@ def plot_growth(age_height_pairs, interpolated_growth_data):
     #print(median_heights)
     iqr = np.subtract(*np.percentile(similar_growth_curves, [75, 25], axis=0))
     avg_iqr = np.subtract(*np.percentile(yearly_growth, [75, 25], axis=0))
-    #print(avg_iqr)
-    #print(iqr)
-    predicted_height_at_18 = median_heights.loc[18.0].round(1)
-   # print(predicted_height_at_18)
+    iqr_18 = avg_iqr[10].round(1)
+    #print('18 iqr:', iqr_18)
+    #print('iqr:',iqr)
+    predicted_height_at_18 = predicted_heights.loc[18.0].round(1)
+    print(predicted_height_at_18)
     # Plot the results
     fig, ax = plt.subplots(figsize=(10, 5))
     ax.set_title('Predicted Growth Curve Based on Similar Patterns')
@@ -141,8 +218,8 @@ def plot_growth(age_height_pairs, interpolated_growth_data):
                         fontsize=12, 
                         color = 'blue')
     for age in whole_number_ages:
-        if age in average_yearly_growth.index:
-            height = average_yearly_growth.loc[age]
+        if age in predicted_heights.index:
+            height = predicted_heights.loc[age]
             #print(age)
             #print(height)
             ax.annotate(f'{height:.2f}', (age, height), 
@@ -152,16 +229,16 @@ def plot_growth(age_height_pairs, interpolated_growth_data):
                         fontsize=12, 
                         color = 'red')
     #print(average_yearly_growth)
-    ax.plot(whole_number_ages, average_yearly_growth, label='Average Yearly Growth', color='red', marker='o')
-    ax.fill_between(whole_number_ages, (average_yearly_growth - avg_iqr), (average_yearly_growth + avg_iqr), color='red', alpha=0.5, label='Avg Growth IQR')
+    ax.plot(whole_number_ages, predicted_heights, label='Average Yearly Growth', color='red', marker='o')
+    ax.fill_between(whole_number_ages, (predicted_heights - avg_iqr), (predicted_heights + avg_iqr), color='red', alpha=0.5, label='Avg Growth IQR')
     handles, labels = plt.gca().get_legend_handles_labels()
     handles.append(annotation_proxy) 
     #by_label = dict(zip(labels, handles))
     ax.legend(handles=handles, labels=labels)
     
-    
+    #plt.show()
     #data_table = similar_growth_curves.to_string()
-    return fig #data_table
+    return fig, predicted_height_at_18, iqr_18 #data_table
 
 def process_reference_data_test(csv_file_path):
     data = pd.read_csv(csv_file_path)
