@@ -38,9 +38,6 @@ def categorize_maturation(test_data):
 
     return result
 
-categorized_data = categorize_maturation(test_data)
-print(categorized_data)
-z=z
 
 #find optimal number of cases to use from the reference data
 def find_optimal_top_n(input_age_height_pairs, actual_height_at_18, interpolated_growth_data, top_n_range):
@@ -78,7 +75,7 @@ def find_best_predicted_height(input_age_height_pairs, interpolated_growth_data,
     return optimal_height, results
 
 
-def find_similar_growth_patterns(input_age_height_pairs, interpolated_growth_data, top_n):
+def find_similar_growth_patterns(input_age_height_pairs, interpolated_growth_data, top_n, method):
     # Generate the full range of ages at 0.1 year intervals
    # Create a mask for ages that we have input data for
     
@@ -95,7 +92,7 @@ def find_similar_growth_patterns(input_age_height_pairs, interpolated_growth_dat
         input_pattern[0, interpolated_growth_data.columns.get_loc(age)] = height
     #print('input pattern', input_pattern)
     # Calculate distances using only the columns for which we have input data
-    distances = cdist(input_pattern[:, age_mask], filtered_growth_data.to_numpy()[:, age_mask], 'euclidean')
+    distances = cdist(input_pattern[:, age_mask], filtered_growth_data.to_numpy()[:, age_mask], method)
     #print('distances:',distances)
     # Get indices of the top_n closest growth curves
     closest_indices = np.argsort(distances[0])[:top_n]
@@ -158,10 +155,10 @@ def generate_predicted_heights(age_height_pairs, similar_growth_curves):
     return predicted_heights, yearly_growth
 
 
-def plot_growth(age_height_pairs, interpolated_growth_data, top_n):
+def plot_growth(age_height_pairs, interpolated_growth_data, top_n, method):
     # Find the 100 most similar growth curves
    
-    similar_growth_curves = find_similar_growth_patterns(age_height_pairs, interpolated_growth_data, top_n)
+    similar_growth_curves = find_similar_growth_patterns(age_height_pairs, interpolated_growth_data, top_n, method)
     predicted_heights, yearly_growth  = generate_predicted_heights(age_height_pairs, similar_growth_curves)
    
     # Calculate the median and the standard deviation (or interquartile range) of the heights at each age
@@ -192,16 +189,16 @@ def plot_growth(age_height_pairs, interpolated_growth_data, top_n):
     # Plot input data points
     input_ages, input_heights = zip(*age_height_pairs)
     #print('next 2:',input_ages, input_heights)
-    for age, height in age_height_pairs:
-        ax.scatter(input_ages, input_heights, color='black', label='Input Data Points', zorder=5, marker = 's')
-        #ax.scatter(18.0, predicted_height_at_18, color='green', label=f'Predicted Height at 18', zorder=5, s=100)
-        ax.annotate(f'{height:.2f}',(age, height), 
-                    textcoords="offset points", 
-                    xytext=(0, 70), ha='center', 
-                    fontsize=12, 
-                    fontweight='bold', 
-                    backgroundcolor = 'yellow')
-        ax.scatter
+    # for age, height in age_height_pairs:
+    #     ax.scatter(input_ages, input_heights, color='black', label='Input Data Points', zorder=5, marker = 's')
+    #     #ax.scatter(18.0, predicted_height_at_18, color='green', label=f'Predicted Height at 18', zorder=5, s=100)
+    #     ax.annotate(f'{height:.2f}',(age, height), 
+    #                 textcoords="offset points", 
+    #                 xytext=(0, 70), ha='center', 
+    #                 fontsize=12, 
+    #                 fontweight='bold', 
+    #                 backgroundcolor = 'yellow')
+    #     ax.scatter
     annotation_proxy = mlines.Line2D([], [], color='yellow', marker='o', markersize=10, label='Input Data')
 
     # Annotate predicted values
@@ -242,9 +239,10 @@ def plot_growth(age_height_pairs, interpolated_growth_data, top_n):
 
 def process_reference_data_test(csv_file_path):
     data = pd.read_csv(csv_file_path)
+    data = data[(data!=0).all(1)]
     atv_columns = [col for col in data.columns if col.startswith('ATV_')]
     id_column = 'child_id' if 'child_id' in data.columns else None
-
+    
     long_format_data = pd.melt(data, id_vars=id_column, value_vars=atv_columns, var_name='Age', value_name='Height')
     long_format_data['Age'] = long_format_data['Age'].apply(lambda x: float(x.split('_')[1]))
     long_format_data = long_format_data.dropna(subset=['Height'])
@@ -313,7 +311,7 @@ def process_reference_data(csv_file_path):
 
 def predict_heights(age_height_pairs, interpolated_growth_data):
     # Find the 100 most similar growth curves
-    similar_growth_curves = find_similar_growth_patterns(age_height_pairs, interpolated_growth_data)
+    similar_growth_curves = find_similar_growth_patterns(age_height_pairs, interpolated_growth_data, top_n, method)
     #print(similar_growth_curves)
     
     average_yearly_growth  = generate_predicted_heights(age_height_pairs, similar_growth_curves)

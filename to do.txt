@@ -5,3 +5,18 @@ print IQR and median and all predicted values, as well as the input data
 See if the RMSE can be printed
 
 Fit PBI model
+
+
+Meeting 26/01/2024
+
+-Write explanation of how the programme works for John
+
+-Create new method to create 'difference matrix' of height gains per year instead of raw height
+
+-Create a 'V2.0' for the additional method 'green'
+
+-Compute errors for 'red' method
+
+-Add toggle between 'eucledian' and 'cosine'
+
+-Idea for 3.0 categorise into groups and plot the means from these
